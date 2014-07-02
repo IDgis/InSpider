@@ -3,8 +3,10 @@ package nl.ipo.cds.admin.config;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.servlet.ServletContext;
@@ -21,11 +23,15 @@ import nl.ipo.cds.admin.i18n.VelocityAdapter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.context.support.ResourceBundleThemeSource;
 import org.springframework.web.context.ServletContextAware;
@@ -50,7 +56,7 @@ import org.springframework.web.servlet.theme.FixedThemeResolver;
 @ComponentScan (useDefaultFilters = false, basePackageClasses = nl.ipo.cds.admin.ba.controller.Package.class, includeFilters = {
 	@ComponentScan.Filter (type = FilterType.ANNOTATION, value = Controller.class)
 })
-public class AdminWebMvcConfig extends WebMvcConfigurerAdapter implements VelocityViewConfiguration, ServletContextAware {
+public class AdminWebMvcConfig extends WebMvcConfigurerAdapter implements VelocityViewConfiguration, ServletContextAware, ResourceLoaderAware {
 	
 	private @Inject LocaleChangeInterceptor localeChangeInterceptor;
 	private @Inject ViewContextHandlerInterceptorAdapter viewContextHandlerInterceptorAdapter;
@@ -61,6 +67,8 @@ public class AdminWebMvcConfig extends WebMvcConfigurerAdapter implements Veloci
 	private static final Log logger = LogFactory.getLog(AdminWebMvcConfig.class);
 	
 	private boolean hasDojoProduction;
+	
+	private ResourceLoader resourceLoader;
 	
 	@Override
 	public void addResourceHandlers (final ResourceHandlerRegistry registry) {
@@ -105,18 +113,36 @@ public class AdminWebMvcConfig extends WebMvcConfigurerAdapter implements Veloci
 	}
 	
 	/**
-	 * Resolves localized messages*.properties and application.properties files in the application to allow for internationalization. 
-     * The messages*.properties files translate Roo generated messages which are part of the admin interface, the application.properties
-     * resource bundle localizes all application specific messages such as entity names and menu items.
+	 * Resolves localized *.properties files in the application to allow for internationalization.     
+	 * @throws IOException 
 	 */
-	public @Bean ReloadableResourceBundleMessageSource messageSource () {
+	public @Bean ReloadableResourceBundleMessageSource messageSource () throws IOException {
 		final ReloadableResourceBundleMessageSource source = new ReloadableResourceBundleMessageSource ();
 		
 		if (!hasDojoProduction) {
 			source.setCacheSeconds (0);
 		}
 		
-		source.setBasenames ("WEB-INF/i18n/messages");
+		final Set<String> basenames = new HashSet<String>();
+		final ResourcePatternResolver patternResolver = (ResourcePatternResolver)resourceLoader;
+		for (final Resource resource : patternResolver.getResources ("WEB-INF/i18n/*")) {
+			final String filename = resource.getFilename();
+			
+			final int endIndex;
+			if (filename.contains ("_")) {
+				endIndex = filename.indexOf ("_");
+			} else {
+				endIndex = filename.indexOf (".");
+			}
+			
+			final String basename = "WEB-INF/i18n/" + filename.substring (0, endIndex);
+			
+			if (basenames.add (basename)) {
+				logger.info ("MessageSource basename '" + basename + "' added");
+			}
+		}
+		
+		source.setBasenames (basenames.toArray (new String[basenames.size()]));
 		source.setFallbackToSystemLocale (false);
 		
 		return source;
@@ -243,5 +269,10 @@ public class AdminWebMvcConfig extends WebMvcConfigurerAdapter implements Veloci
 	@Bean
 	public VelocityAdapter velocityAdapter() {
 		return new VelocityAdapter();
+	}
+
+	@Override
+	public void setResourceLoader(ResourceLoader resourceLoader) {
+		this.resourceLoader = resourceLoader;
 	}	
 }
