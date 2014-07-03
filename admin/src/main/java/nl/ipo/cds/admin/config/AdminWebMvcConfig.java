@@ -242,6 +242,9 @@ public class AdminWebMvcConfig extends WebMvcConfigurerAdapter implements Veloci
 	
 	@Bean
 	public VelocityAdapter velocityAdapter() {
-		return new VelocityAdapter();
+		final EnableVelocityViewResolver viewResolver = AdminWebMvcConfig.class.getAnnotation(EnableVelocityViewResolver.class);
+		final String resourceLoaderPath = viewResolver.resourceLoaderPath();
+		
+		return new VelocityAdapter(localeProvider(), resourceLoaderPath.substring(1, resourceLoaderPath.length()));
 	}	
 }

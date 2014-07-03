@@ -249,7 +249,7 @@
 	##    		<div id="helpDialog" data-dojo-type="dijit/Dialog" data-dojo-props="title:'Help'">
 				    <div id="helpDialogContentPane" data-dojo-type="dijit/layout/ContentPane">
 				    #if($roleFunction)
-		    			#parse ("help/${roleFunction}.vm")
+		    			#parse ($i18n.getLocaleView("help/${roleFunction}.vm"))
 		    		#end
 		   			</div>   				        
 				</div>
