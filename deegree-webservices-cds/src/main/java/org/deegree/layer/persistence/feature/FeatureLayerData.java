@@ -50,7 +50,6 @@ import org.deegree.feature.GenericFeatureCollection;
 import org.deegree.feature.persistence.FeatureStore;
 import org.deegree.feature.persistence.query.Query;
 import org.deegree.feature.stream.FeatureInputStream;
-import org.deegree.feature.stream.ThreadedFeatureInputStream;
 import org.deegree.feature.types.AppSchemas;
 import org.deegree.feature.xpath.TypedObjectNodeXPathEvaluator;
 import org.deegree.filter.FilterEvaluationException;
@@ -100,7 +99,6 @@ public class FeatureLayerData implements LayerData {
         try {
             // TODO Should this always be done on this level? What about min and maxFill values?
             features = featureStore.query( queries.toArray( new Query[queries.size()] ) );
-            features = new ThreadedFeatureInputStream( features, 100, 20 );
 
             FeatureStreamRenderer renderer = new FeatureStreamRenderer( context, maxFeatures, evaluator );
             renderer.renderFeatureStream( features, style );
